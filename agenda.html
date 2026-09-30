@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Agenda - Reserva do Laboratório</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<header class="cabecalho">
+
+    <div>
+        <h1>📅 Agenda Digital</h1>
+
+        <p>
+            Reserva do Laboratório
+        </p>
+    </div>
+
+    <button
+        class="botao-sair"
+        onclick="sair()">
+
+        Sair
+
+    </button>
+
+</header>
+
+
+<main class="agenda-container">
+
+
+    <!-- BOAS-VINDAS -->
+
+    <section class="boas-vindas">
+
+        <h2>
+            Olá, <span id="nomeUsuario">Aluno</span>! 👋
+        </h2>
+
+        <p>
+            Escolha uma data e um horário para reservar o laboratório.
+        </p>
+
+    </section>
+
+
+
+    <!-- CALENDÁRIO -->
+
+    <section class="calendario">
+
+        <div class="titulo-agenda">
+
+            <button
+                class="mes-botao"
+                onclick="mesAnterior()">
+
+                ←
+
+            </button>
+
+
+            <h2 id="mesAno">
+                Setembro 2026
+            </h2>
+
+
+            <button
+                class="mes-botao"
+                onclick="proximoMes()">
+
+                →
+
+            </button>
+
+        </div>
+
+
+        <!-- SOMENTE SEGUNDA A SEXTA -->
+
+        <div class="dias-semana">
+
+            <span>SEG</span>
+            <span>TER</span>
+            <span>QUA</span>
+            <span>QUI</span>
+            <span>SEX</span>
+
+        </div>
+
+
+        <div
+            class="dias"
+            id="diasCalendario">
+
+        </div>
+
+    </section>
+
+
+
+    <!-- RESERVA -->
+
+    <section
+        class="reserva"
+        id="areaReserva">
+
+        <h2>
+            🕐 Escolha um horário
+        </h2>
+
+
+        <p id="dataSelecionada">
+
+            Selecione uma data no calendário.
+
+        </p>
+
+
+        <!-- HORÁRIOS -->
+
+        <div class="horarios">
+
+            <button
+                type="button"
+                onclick="selecionarHorario(this)"
+                data-inicio="07:00"
+                data-fim="07:50">
+
+                07:00 - 07:50
+
+            </button>
+
+
+            <button
+                type="button"
+                onclick="selecionarHorario(this)"
+                data-inicio="07:50"
+                data-fim="08:40">
+
+                07:50 - 08:40
+
+            </button>
+
+
+            <button
+                type="button"
+                onclick="selecionarHorario(this)"
+                data-inicio="08:40"
+                data-fim="09:30">
+
+                08:40 - 09:30
+
+            </button>
+
+
+            <button
+                type="button"
+                onclick="selecionarHorario(this)"
+                data-inicio="09:30"
+                data-fim="10:20">
+
+                09:30 - 10:20
+
+            </button>
+
+
+            <button
+                type="button"
+                onclick="selecionarHorario(this)"
+                data-inicio="10:40"
+                data-fim="11:30">
+
+                10:40 - 11:30
+
+            </button>
+
+
+            <button
+                type="button"
+                onclick="selecionarHorario(this)"
+                data-inicio="11:30"
+                data-fim="12:20">
+
+                11:30 - 12:20
+
+            </button>
+            
+        </div>
+
+
+
+        <!-- TURMA -->
+
+        <label for="turma">
+
+            Turma
+
+        </label>
+
+
+        <select id="turma">
+
+            <option value="">
+                Selecione sua turma
+            </option>
+
+            <optgroup label="2º Ano">
+
+                <option value="2º A">
+                    2º A
+                </option>
+
+                <option value="2º B">
+                    2º B
+                </option>
+
+            </optgroup>
+
+
+            <optgroup label="3º Ano">
+
+                <option value="3º A">
+                    3º A
+                </option>
+
+            </optgroup>
+
+        </select>
+
+
+
+        <!-- LABORATÓRIO -->
+
+        <label for="laboratorio">
+
+            Laboratório
+
+        </label>
+
+
+        <select id="laboratorio">
+
+            <option value="Laboratório de Informática">
+
+                Laboratório de Informática
+
+            </option>
+
+        </select>
+
+
+
+        <!-- MOTIVO -->
+
+        <label for="motivo">
+
+            Motivo da reserva
+
+        </label>
+
+
+        <textarea
+            id="motivo"
+            placeholder="Digite o motivo da reserva">
+        </textarea>
+
+
+
+        <!-- CONFIRMAR -->
+
+        <button
+            class="botao"
+            onclick="confirmarReserva()">
+
+            Confirmar reserva
+
+        </button>
+
+    </section>
+
+
+
+    <!-- MINHAS RESERVAS -->
+
+    <section class="minhas-reservas">
+
+        <h2>
+            📋 Minhas reservas
+        </h2>
+
+
+        <div id="listaReservas">
+
+            <p>
+                Você ainda não possui reservas.
+            </p>
+
+        </div>
+
+    </section>
+
+
+</main>
+
+
+<script src="script.js"></script>
+
+</body>
+
+</html>

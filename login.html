@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Login - Agenda Digital</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="pagina-formulario">
+
+        <div class="formulario">
+
+            <div class="icone">
+                🔐
+            </div>
+
+            <h1>Bem-vindo!</h1>
+
+            <p>
+                Entre na sua conta para acessar a agenda.
+            </p>
+
+            <form onsubmit="fazerLogin(event)">
+
+                <label for="loginUsuario">
+                    E-mail ou RA
+                </label>
+
+                <input
+                    type="text"
+                    id="loginUsuario"
+                    placeholder="Digite seu e-mail ou RA"
+                    required
+                >
+
+                <label for="loginSenha">
+                    Senha
+                </label>
+
+                <input
+                    type="password"
+                    id="loginSenha"
+                    placeholder="Digite sua senha"
+                    required
+                >
+
+                <button type="submit" class="botao">
+                    Entrar
+                </button>
+
+            </form>
+
+            <p class="link-formulario">
+                Ainda não possui uma conta?
+                <a href="cadastro.html">Cadastrar-se</a>
+            </p>
+
+            <a href="index.html" class="voltar">
+                ← Voltar
+            </a>
+
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Cadastro - Agenda Digital</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <main class="pagina-formulario">
+
+        <div class="formulario">
+
+            <div class="icone">
+                👤
+            </div>
+
+            <h1>Criar conta</h1>
+
+            <p>
+                Cadastre-se para reservar o laboratório.
+            </p>
+
+            <form onsubmit="fazerCadastro(event)">
+
+                <label for="tipo">
+                    Tipo de usuário
+                </label>
+
+                <select id="tipo" required>
+
+                    <option value="">
+                        Selecione
+                    </option>
+
+                    <option value="Professor">
+                        Professor
+                    </option>
+
+                </select>
+
+
+                <label for="nome">
+                    Nome completo
+                </label>
+
+                <input
+                    type="text"
+                    id="nome"
+                    placeholder="Digite seu nome completo"
+                    required
+                >
+
+
+                <label for="identificacao">
+                    E-mail
+                </label>
+
+                <input
+                    type="text"
+                    id="identificacao"
+                    placeholder="Digite seu e-mail"
+                    required
+                >
+
+
+                <label for="senha">
+                    Senha
+                </label>
+
+                <input
+                    type="password"
+                    id="senha"
+                    placeholder="Crie uma senha"
+                    required>
+
+
+                <button type="submit" class="botao">
+                    Criar minha conta
+                </button>
+
+            </form>
+
+
+            <p class="">
+
+                Já possui uma conta?
+
+                <a href="login.html">
+                    Fazer login
+                </a>
+
+            </p>
+
+
+            <a href="index.html" class="voltar">
+                ← Voltar
+            </a>
+
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
