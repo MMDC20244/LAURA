@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap');
+
+:root {
+    --fundo: #eef3f2;
+    --papel: #ffffff;
+    --tinta: #16252b;
+    --suave: #5b6b72;
+    --linha: #d5dfdd;
+    --primaria: #0f766e;
+    --primaria-escura: #0b5a54;
+    --destaque: #f4b740;
+    --erro: #b42318;
+    --ok: #0f766e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--fundo);
+    color: var(--tinta);
+    line-height: 1.5;
+}
+
+h1, h2 { line-height: 1.2; }
+a { color: var(--primaria); }
+:focus-visible { outline: 3px solid var(--destaque); outline-offset: 2px; }
+
+/* BOTÕES */
+.botao {
+    display: inline-block;
+    width: 100%;
+    padding: 14px 20px;
+    border: 2px solid var(--primaria);
+    border-radius: 10px;
+    background: var(--primaria);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s;
+}
+.botao:hover { background: var(--primaria-escura); }
+.botao:disabled { opacity: .6; cursor: wait; }
+.botao-secundario { background: transparent; color: var(--primaria); }
+.botao-secundario:hover { background: #e0efed; }
+
+/* CAPA */
+.pagina-capa { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--primaria); }
+.capa { background: var(--papel); border-radius: 20px; padding: 40px 32px; max-width: 420px; width: 100%; text-align: center; }
+.icone-capa { font-size: 56px; }
+.capa h1 { margin: 12px 0 6px; font-size: 2rem; }
+.capa p { color: var(--suave); }
+.botoes-capa { display: grid; gap: 12px; margin-top: 28px; }
+
+/* FORMULÁRIOS */
+.pagina-formulario { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.formulario { background: var(--papel); border: 1px solid var(--linha); border-radius: 16px; padding: 32px 28px; width: 100%; max-width: 420px; }
+.formulario .icone { font-size: 40px; }
+.formulario h1 { margin: 8px 0 4px; font-size: 1.6rem; }
+.formulario > p { color: var(--suave); margin-bottom: 20px; }
+
+label { display: block; margin: 14px 0 6px; font-weight: 700; font-size: .95rem; }
+input, select, textarea {
+    width: 100%; padding: 12px 14px; font: inherit; color: inherit;
+    background: #fff; border: 1.5px solid var(--linha); border-radius: 10px;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--primaria); outline: none; box-shadow: 0 0 0 3px #bfe3df; }
+textarea { min-height: 90px; resize: vertical; }
+form .botao, .reserva .botao { margin-top: 18px; }
+
+.link-formulario { margin-top: 18px; text-align: center; color: var(--suave); }
+.voltar { display: block; margin-top: 14px; text-align: center; text-decoration: none; color: var(--suave); }
+
+.mensagem { min-height: 1.4em; margin-top: 12px; font-weight: 700; font-size: .95rem; }
+.mensagem.erro { color: var(--erro); }
+.mensagem.ok { color: var(--ok); }
+
+/* CABEÇALHO */
+.cabecalho {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 16px 24px; background: var(--primaria); color: #fff;
+}
+.cabecalho h1 { font-size: 1.3rem; }
+.cabecalho p { opacity: .85; font-size: .9rem; }
+.botao-sair {
+    padding: 8px 18px; border: 2px solid #fff; border-radius: 8px;
+    background: transparent; color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+}
+.botao-sair:hover { background: rgba(255,255,255,.15); }
+
+/* AGENDA */
+.agenda-container { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
+.agenda-container section { background: var(--papel); border: 1px solid var(--linha); border-radius: 16px; padding: 24px; }
+.boas-vindas p { color: var(--suave); margin-top: 4px; }
+
+.titulo-agenda { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.titulo-agenda h2 { font-size: 1.2rem; }
+.mes-botao {
+    width: 40px; height: 40px; border: 1.5px solid var(--linha); border-radius: 10px;
+    background: #fff; font-size: 1.1rem; cursor: pointer;
+}
+.mes-botao:hover { background: #e0efed; }
+
+.dias-semana, .dias { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.dias-semana span { text-align: center; font-size: .8rem; font-weight: 700; color: var(--suave); padding-bottom: 6px; }
+.dia {
+    aspect-ratio: 1; border: 1.5px solid var(--linha); border-radius: 10px;
+    background: #fff; font: inherit; font-weight: 700; cursor: pointer;
+}
+.dia:hover:not(:disabled) { border-color: var(--primaria); background: #e0efed; }
+.dia:disabled { background: transparent; border-color: transparent; color: #aab6b4; cursor: not-allowed; }
+.dia.vazio { visibility: hidden; }
+.dia.hoje { border-color: var(--primaria); }
+.dia.selecionado { background: var(--primaria); border-color: var(--primaria); color: #fff; }
+
+.reserva h2, .minhas-reservas h2 { font-size: 1.2rem; }
+#dataSelecionada { color: var(--suave); margin: 4px 0 16px; }
+.reserva.bloqueada .horarios { opacity: .5; pointer-events: none; }
+
+.horarios { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.horarios button {
+    padding: 12px 8px; font: inherit; font-weight: 700; cursor: pointer;
+    background: #fff; border: 1.5px solid var(--linha); border-radius: 10px;
+}
+.horarios button:hover:not(:disabled) { border-color: var(--primaria); background: #e0efed; }
+.horarios button.selecionado { background: var(--primaria); border-color: var(--primaria); color: #fff; }
+.horarios button:disabled { background: #f1f3f3; color: #8a9896; text-decoration: line-through; cursor: not-allowed; }
+
+/* MINHAS RESERVAS */
+.reserva-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 14px 0; border-top: 1px solid var(--linha);
+}
+.minhas-reservas h2 + div { margin-top: 12px; }
+.reserva-item:first-child { border-top: 0; }
+.reserva-item strong { display: block; }
+.reserva-item span { color: var(--suave); font-size: .92rem; }
+.cancelar {
+    padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer;
+    color: var(--erro); background: #fff; border: 1.5px solid var(--erro); border-radius: 8px;
+}
+.cancelar:hover { background: #fdecea; }
+
+@media (max-width: 480px) {
+    .agenda-container section { padding: 18px; }
+    .reserva-item { flex-direction: column; align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
