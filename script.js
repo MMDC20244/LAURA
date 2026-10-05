@@ -1,126 +1,184 @@
-/* ===== Utilidades ===== */
-const NOMES_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+/* ===== Agenda Digital - script.js ===== */
 
-function mostrarMensagem(texto, tipo = 'erro') {
-    const el = document.getElementById('mensagem');
-    if (!el) return alert(texto);
+const EMAIL_AVISO = "alinesouzaa@prof.educacao.sp.gov.br";
+const URL_EMAIL = "https://formsubmit.co/ajax/" + EMAIL_AVISO;
+
+/* ---------- Armazenamento (no navegador) ---------- */
+
+function ler(chave, padrao) {
+    try {
+        const v = localStorage.getItem(chave);
+        return v ? JSON.parse(v) : padrao;
+    } catch (e) {
+        return padrao;
+    }
+}
+
+function gravar(chave, valor) {
+    localStorage.setItem(chave, JSON.stringify(valor));
+}
+
+async function gerarHash(texto) {
+    if (window.crypto && crypto.subtle) {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    return texto;
+}
+
+function mostrarMensagem(texto, tipo) {
+    const el = document.getElementById("mensagem");
+    if (!el) { alert(texto); return; }
     el.textContent = texto;
-    el.className = 'mensagem ' + tipo;
+    el.className = "mensagem " + tipo;
 }
 
-async function api(caminho, opcoes = {}) {
-    const token = localStorage.getItem('token');
-    const resposta = await fetch('/api/' + caminho, {
-        ...opcoes,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: 'Bearer ' + token } : {}),
-        },
+/* ---------- Cadastro ---------- */
+
+async function fazerCadastro(event) {
+    event.preventDefault();
+
+    const tipo = document.getElementById("tipo").value;
+    const nome = document.getElementById("nome").value.trim();
+    const email = document.getElementById("identificacao").value.trim().toLowerCase();
+    const senha = document.getElementById("senha").value;
+
+    if (nome.split(" ").length < 2) {
+        mostrarMensagem("Digite seu nome completo.", "erro");
+        return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        mostrarMensagem("Digite um e-mail válido.", "erro");
+        return;
+    }
+    if (senha.length < 6) {
+        mostrarMensagem("A senha precisa ter pelo menos 6 caracteres.", "erro");
+        return;
+    }
+
+    const usuarios = ler("usuarios", []);
+    if (usuarios.some(u => u.email === email)) {
+        mostrarMensagem("Este e-mail já tem cadastro. Faça login.", "erro");
+        return;
+    }
+
+    const botao = event.target.querySelector("button[type=submit]");
+    botao.disabled = true;
+    botao.textContent = "Criando conta...";
+
+    const dataCadastro = new Date().toLocaleString("pt-BR");
+
+    usuarios.push({
+        tipo: tipo,
+        nome: nome,
+        email: email,
+        senha: await gerarHash(senha),
+        criadoEm: dataCadastro
     });
-    const dados = await resposta.json().catch(() => ({}));
-    if (resposta.status === 401 && document.getElementById('areaReserva')) sair();
-    if (!resposta.ok) throw new Error(dados.erro || 'Algo deu errado. Tente novamente.');
-    return dados;
-}
+    gravar("usuarios", usuarios);
 
-function formatarData(iso) {
-    const [a, m, d] = iso.split('-');
-    return `${d}/${m}/${a}`;
-}
-
-/* ===== Cadastro e login ===== */
-async function fazerCadastro(evento) {
-    evento.preventDefault();
-    const botao = evento.target.querySelector('button[type=submit]');
-    botao.disabled = true;
+    // Aviso por e-mail (a senha nunca é enviada)
     try {
-        await api('cadastro', {
-            method: 'POST',
+        await fetch(URL_EMAIL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
             body: JSON.stringify({
-                tipo: document.getElementById('tipo').value,
-                nome: document.getElementById('nome').value,
-                email: document.getElementById('email').value,
-                senha: document.getElementById('senha').value,
-            }),
+                _subject: "Novo cadastro na Agenda Digital",
+                _template: "table",
+                _captcha: "false",
+                Tipo: tipo,
+                Nome: nome,
+                Email: email,
+                Data: dataCadastro
+            })
         });
-        mostrarMensagem('Conta criada! Redirecionando para o login...', 'ok');
-        setTimeout(() => (location.href = 'login.html'), 1200);
     } catch (e) {
-        mostrarMensagem(e.message);
-        botao.disabled = false;
+        console.warn("Não foi possível enviar o aviso por e-mail.", e);
     }
+
+    mostrarMensagem("Conta criada com sucesso! Indo para o login...", "sucesso");
+    setTimeout(() => { window.location.href = "login.html"; }, 1500);
 }
 
-async function fazerLogin(evento) {
-    evento.preventDefault();
-    const botao = evento.target.querySelector('button[type=submit]');
-    botao.disabled = true;
-    try {
-        const dados = await api('login', {
-            method: 'POST',
-            body: JSON.stringify({
-                email: document.getElementById('loginUsuario').value,
-                senha: document.getElementById('loginSenha').value,
-            }),
-        });
-        localStorage.setItem('token', dados.token);
-        localStorage.setItem('nome', dados.nome);
-        location.href = 'agenda.html';
-    } catch (e) {
-        mostrarMensagem(e.message);
-        botao.disabled = false;
+/* ---------- Login ---------- */
+
+async function fazerLogin(event) {
+    event.preventDefault();
+
+    const usuario = document.getElementById("loginUsuario").value.trim().toLowerCase();
+    const senha = await gerarHash(document.getElementById("loginSenha").value);
+
+    const encontrado = ler("usuarios", []).find(u =>
+        (u.email === usuario || (u.ra && u.ra.toLowerCase() === usuario)) && u.senha === senha
+    );
+
+    if (!encontrado) {
+        mostrarMensagem("E-mail ou senha incorretos.", "erro");
+        return;
     }
+
+    gravar("usuarioLogado", { nome: encontrado.nome, email: encontrado.email });
+    window.location.href = "agenda.html";
 }
 
 function sair() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('nome');
-    location.href = 'login.html';
+    localStorage.removeItem("usuarioLogado");
+    window.location.href = "index.html";
 }
 
-/* ===== Agenda ===== */
+/* ---------- Agenda ---------- */
+
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
 let mesAtual = new Date().getMonth();
 let anoAtual = new Date().getFullYear();
-let dataEscolhida = null;
-let horarioEscolhido = null;
+let dataEscolhida = null;   // formato AAAA-MM-DD
+let horarioEscolhido = null; // { inicio, fim }
 
-function hojeISO() {
-    const h = new Date();
-    return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`;
+function formatarISO(ano, mes, dia) {
+    return ano + "-" + String(mes + 1).padStart(2, "0") + "-" + String(dia).padStart(2, "0");
+}
+
+function formatarBR(iso) {
+    const [a, m, d] = iso.split("-");
+    return d + "/" + m + "/" + a;
 }
 
 function desenharCalendario() {
-    document.getElementById('mesAno').textContent = `${NOMES_MESES[mesAtual]} ${anoAtual}`;
-    const grade = document.getElementById('diasCalendario');
-    grade.innerHTML = '';
-    const hoje = hojeISO();
-    const total = new Date(anoAtual, mesAtual + 1, 0).getDate();
-    let primeiro = true;
+    const grade = document.getElementById("diasCalendario");
+    document.getElementById("mesAno").textContent = MESES[mesAtual] + " " + anoAtual;
+    grade.innerHTML = "";
 
-    for (let d = 1; d <= total; d++) {
-        const data = new Date(anoAtual, mesAtual, d);
-        const diaSemana = data.getDay(); // 0 = domingo, 6 = sábado
-        if (diaSemana === 0 || diaSemana === 6) continue;
+    const hoje = new Date();
+    const hojeISO = formatarISO(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const totalDias = new Date(anoAtual, mesAtual + 1, 0).getDate();
 
-        if (primeiro) {
-            for (let i = 0; i < diaSemana - 1; i++) {
-                const vazio = document.createElement('button');
-                vazio.className = 'dia vazio';
-                vazio.disabled = true;
-                grade.appendChild(vazio);
-            }
-            primeiro = false;
+    // Quantos espaços vazios antes do dia 1 (colunas: SEG=0 ... SEX=4)
+    const primeiro = new Date(anoAtual, mesAtual, 1).getDay(); // 0=dom
+    let vazios = primeiro === 0 || primeiro === 6 ? 0 : primeiro - 1;
+    for (let i = 0; i < vazios; i++) {
+        grade.appendChild(document.createElement("span"));
+    }
+
+    for (let dia = 1; dia <= totalDias; dia++) {
+        const diaSemana = new Date(anoAtual, mesAtual, dia).getDay();
+        if (diaSemana === 0 || diaSemana === 6) continue; // só segunda a sexta
+
+        const iso = formatarISO(anoAtual, mesAtual, dia);
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "dia";
+        botao.textContent = dia;
+
+        if (iso < hojeISO) {
+            botao.disabled = true;
+            botao.classList.add("dia-passado");
         }
+        if (iso === hojeISO) botao.classList.add("dia-hoje");
+        if (iso === dataEscolhida) botao.classList.add("dia-selecionado");
 
-        const iso = `${anoAtual}-${String(mesAtual + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const botao = document.createElement('button');
-        botao.type = 'button';
-        botao.className = 'dia';
-        botao.textContent = d;
-        if (iso < hoje) botao.disabled = true;
-        if (iso === hoje) botao.classList.add('hoje');
-        if (iso === dataEscolhida) botao.classList.add('selecionado');
-        botao.onclick = () => selecionarData(iso);
+        botao.onclick = () => escolherData(iso);
         grade.appendChild(botao);
     }
 }
@@ -137,111 +195,131 @@ function proximoMes() {
     desenharCalendario();
 }
 
-async function selecionarData(iso) {
+function escolherData(iso) {
     dataEscolhida = iso;
     horarioEscolhido = null;
+    document.getElementById("dataSelecionada").textContent = "Data escolhida: " + formatarBR(iso);
     desenharCalendario();
-    document.getElementById('dataSelecionada').textContent = 'Horários para ' + formatarData(iso);
-    document.getElementById('areaReserva').classList.remove('bloqueada');
+    atualizarHorarios();
+}
 
-    const botoes = document.querySelectorAll('#horarios button');
-    botoes.forEach(b => { b.disabled = false; b.classList.remove('selecionado'); });
-    try {
-        const { ocupados } = await api('reservas?data=' + iso);
-        botoes.forEach(b => { if (ocupados.includes(b.dataset.inicio)) b.disabled = true; });
-    } catch (e) {
-        mostrarMensagem(e.message);
+function atualizarHorarios() {
+    const reservas = ler("reservas", []);
+    document.querySelectorAll(".horarios button").forEach(btn => {
+        btn.classList.remove("selecionado", "ocupado");
+        btn.disabled = false;
+        const ocupado = dataEscolhida && reservas.some(r =>
+            r.data === dataEscolhida && r.inicio === btn.dataset.inicio
+        );
+        if (ocupado) {
+            btn.classList.add("ocupado");
+            btn.disabled = true;
+        }
+    });
+}
+
+function selecionarHorario(btn) {
+    if (!dataEscolhida) {
+        alert("Escolha uma data no calendário primeiro.");
+        return;
     }
-    document.getElementById('areaReserva').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelectorAll(".horarios button").forEach(b => b.classList.remove("selecionado"));
+    btn.classList.add("selecionado");
+    horarioEscolhido = { inicio: btn.dataset.inicio, fim: btn.dataset.fim };
 }
 
-function selecionarHorario(botao) {
-    document.querySelectorAll('#horarios button').forEach(b => b.classList.remove('selecionado'));
-    botao.classList.add('selecionado');
-    horarioEscolhido = { inicio: botao.dataset.inicio, fim: botao.dataset.fim };
-}
+function confirmarReserva() {
+    const logado = ler("usuarioLogado", null);
+    const turma = document.getElementById("turma").value;
+    const laboratorio = document.getElementById("laboratorio").value;
+    const motivo = document.getElementById("motivo").value.trim();
 
-async function confirmarReserva() {
-    const turma = document.getElementById('turma').value;
-    const motivo = document.getElementById('motivo').value.trim();
-    if (!dataEscolhida) return mostrarMensagem('Selecione uma data no calendário.');
-    if (!horarioEscolhido) return mostrarMensagem('Selecione um horário.');
-    if (!turma) return mostrarMensagem('Selecione a turma.');
-    if (!motivo) return mostrarMensagem('Informe o motivo da reserva.');
+    if (!dataEscolhida) return alert("Escolha uma data.");
+    if (!horarioEscolhido) return alert("Escolha um horário.");
+    if (!turma) return alert("Selecione a turma.");
+    if (!motivo) return alert("Digite o motivo da reserva.");
 
-    try {
-        await api('reservas', {
-            method: 'POST',
-            body: JSON.stringify({
-                data: dataEscolhida,
-                inicio: horarioEscolhido.inicio,
-                fim: horarioEscolhido.fim,
-                turma,
-                laboratorio: document.getElementById('laboratorio').value,
-                motivo,
-            }),
-        });
-        mostrarMensagem('Reserva confirmada!', 'ok');
-        document.getElementById('motivo').value = '';
-        await selecionarData(dataEscolhida);
-        carregarReservas();
-    } catch (e) {
-        mostrarMensagem(e.message);
-        if (dataEscolhida) selecionarData(dataEscolhida);
+    const reservas = ler("reservas", []);
+    if (reservas.some(r => r.data === dataEscolhida && r.inicio === horarioEscolhido.inicio)) {
+        alert("Este horário acabou de ser reservado. Escolha outro.");
+        atualizarHorarios();
+        return;
     }
+
+    reservas.push({
+        id: Date.now(),
+        email: logado.email,
+        nome: logado.nome,
+        data: dataEscolhida,
+        inicio: horarioEscolhido.inicio,
+        fim: horarioEscolhido.fim,
+        turma: turma,
+        laboratorio: laboratorio,
+        motivo: motivo
+    });
+    gravar("reservas", reservas);
+
+    document.getElementById("motivo").value = "";
+    document.getElementById("turma").value = "";
+    horarioEscolhido = null;
+    atualizarHorarios();
+    listarReservas();
+    alert("Reserva confirmada!");
 }
 
-async function carregarReservas() {
-    const lista = document.getElementById('listaReservas');
-    try {
-        const { reservas } = await api('reservas');
-        if (!reservas.length) {
-            lista.innerHTML = '<p>Você ainda não tem reservas.</p>';
+function cancelarReserva(id) {
+    if (!confirm("Deseja cancelar esta reserva?")) return;
+    gravar("reservas", ler("reservas", []).filter(r => r.id !== id));
+    atualizarHorarios();
+    listarReservas();
+}
+
+function listarReservas() {
+    const logado = ler("usuarioLogado", null);
+    const lista = document.getElementById("listaReservas");
+    const minhas = ler("reservas", [])
+        .filter(r => r.email === logado.email)
+        .sort((a, b) => (a.data + a.inicio).localeCompare(b.data + b.inicio));
+
+    if (minhas.length === 0) {
+        lista.innerHTML = "<p>Você ainda não possui reservas.</p>";
+        return;
+    }
+
+    lista.innerHTML = "";
+    minhas.forEach(r => {
+        const item = document.createElement("div");
+        item.className = "reserva-item";
+
+        const info = document.createElement("div");
+        const titulo = document.createElement("strong");
+        titulo.textContent = formatarBR(r.data) + " · " + r.inicio + " - " + r.fim;
+        const detalhe = document.createElement("p");
+        detalhe.textContent = r.turma + " · " + r.laboratorio + " · " + r.motivo;
+        info.append(titulo, detalhe);
+
+        const cancelar = document.createElement("button");
+        cancelar.className = "botao-cancelar";
+        cancelar.textContent = "Cancelar";
+        cancelar.onclick = () => cancelarReserva(r.id);
+
+        item.append(info, cancelar);
+        lista.appendChild(item);
+    });
+}
+
+/* ---------- Inicialização ---------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (document.getElementById("diasCalendario")) {
+        const logado = ler("usuarioLogado", null);
+        if (!logado) {
+            window.location.href = "login.html";
             return;
         }
-        lista.innerHTML = '';
-        reservas.forEach(r => {
-            const item = document.createElement('div');
-            item.className = 'reserva-item';
-            const info = document.createElement('div');
-            const titulo = document.createElement('strong');
-            titulo.textContent = `${formatarData(r.data)} · ${r.inicio.slice(0, 5)} - ${r.fim.slice(0, 5)}`;
-            const detalhe = document.createElement('span');
-            detalhe.textContent = `${r.turma} · ${r.laboratorio} · ${r.motivo}`;
-            info.append(titulo, detalhe);
-
-            const cancelar = document.createElement('button');
-            cancelar.className = 'cancelar';
-            cancelar.textContent = 'Cancelar';
-            cancelar.onclick = () => cancelarReserva(r.id);
-
-            item.append(info, cancelar);
-            lista.appendChild(item);
-        });
-    } catch (e) {
-        lista.innerHTML = '<p>Não foi possível carregar suas reservas.</p>';
-    }
-}
-
-async function cancelarReserva(id) {
-    if (!confirm('Cancelar esta reserva?')) return;
-    try {
-        await api('reservas?id=' + id, { method: 'DELETE' });
-        carregarReservas();
-        if (dataEscolhida) selecionarData(dataEscolhida);
-    } catch (e) {
-        mostrarMensagem(e.message);
-    }
-}
-
-/* ===== Inicialização da página da agenda ===== */
-if (document.getElementById('areaReserva')) {
-    if (!localStorage.getItem('token')) {
-        location.href = 'login.html';
-    } else {
-        document.getElementById('nomeUsuario').textContent = localStorage.getItem('nome') || 'professor(a)';
-        document.getElementById('areaReserva').classList.add('bloqueada');
+        document.getElementById("nomeUsuario").textContent = logado.nome.split(" ")[0];
         desenharCalendario();
-        carregarReservas();
+        atualizarHorarios();
+        listarReservas();
     }
-}
+});

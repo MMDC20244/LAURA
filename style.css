@@ -1,151 +1,245 @@
-@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap');
-
 :root {
-    --fundo: #eef3f2;
+    --fundo: #eef3f1;
     --papel: #ffffff;
-    --tinta: #16252b;
-    --suave: #5b6b72;
-    --linha: #d5dfdd;
-    --primaria: #0f766e;
-    --primaria-escura: #0b5a54;
-    --destaque: #f4b740;
-    --erro: #b42318;
-    --ok: #0f766e;
+    --tinta: #12312b;
+    --suave: #5b706b;
+    --verde: #1b6b5a;
+    --verde-escuro: #124b3f;
+    --ambar: #f2b441;
+    --linha: #d5e0dc;
+    --erro: #b3261e;
+    --raio: 12px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
     background: var(--fundo);
     color: var(--tinta);
     line-height: 1.5;
+    min-height: 100vh;
 }
 
 h1, h2 { line-height: 1.2; }
-a { color: var(--primaria); }
-:focus-visible { outline: 3px solid var(--destaque); outline-offset: 2px; }
 
-/* BOTÕES */
+a { color: var(--verde); font-weight: 600; }
+
+:focus-visible { outline: 3px solid var(--ambar); outline-offset: 2px; }
+
+/* ---------- Botões ---------- */
+
 .botao {
     display: inline-block;
     width: 100%;
     padding: 14px 20px;
-    border: 2px solid var(--primaria);
-    border-radius: 10px;
-    background: var(--primaria);
+    border: 2px solid var(--verde);
+    border-radius: var(--raio);
+    background: var(--verde);
     color: #fff;
-    font: inherit;
-    font-weight: 700;
+    font-size: 1rem;
+    font-weight: 600;
     text-align: center;
     text-decoration: none;
     cursor: pointer;
     transition: background .15s;
 }
-.botao:hover { background: var(--primaria-escura); }
+.botao:hover { background: var(--verde-escuro); }
 .botao:disabled { opacity: .6; cursor: wait; }
-.botao-secundario { background: transparent; color: var(--primaria); }
-.botao-secundario:hover { background: #e0efed; }
 
-/* CAPA */
-.pagina-capa { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--primaria); }
-.capa { background: var(--papel); border-radius: 20px; padding: 40px 32px; max-width: 420px; width: 100%; text-align: center; }
-.icone-capa { font-size: 56px; }
-.capa h1 { margin: 12px 0 6px; font-size: 2rem; }
-.capa p { color: var(--suave); }
-.botoes-capa { display: grid; gap: 12px; margin-top: 28px; }
+.botao-secundario { background: transparent; color: var(--verde); }
+.botao-secundario:hover { background: var(--verde); color: #fff; }
 
-/* FORMULÁRIOS */
-.pagina-formulario { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-.formulario { background: var(--papel); border: 1px solid var(--linha); border-radius: 16px; padding: 32px 28px; width: 100%; max-width: 420px; }
-.formulario .icone { font-size: 40px; }
-.formulario h1 { margin: 8px 0 4px; font-size: 1.6rem; }
+/* ---------- Capa ---------- */
+
+.pagina-capa {
+    display: grid;
+    place-items: center;
+    background: var(--verde-escuro);
+    padding: 24px;
+}
+.capa {
+    background: var(--papel);
+    border-radius: 20px;
+    padding: 48px 32px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+}
+.icone-capa { font-size: 3.5rem; margin-bottom: 8px; }
+.capa h1 { font-size: 2rem; }
+.capa p { color: var(--suave); margin: 8px 0 28px; }
+.botoes-capa { display: grid; gap: 12px; }
+
+/* ---------- Formulários (login e cadastro) ---------- */
+
+.pagina-formulario {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+.formulario {
+    background: var(--papel);
+    border-radius: 20px;
+    padding: 36px 28px;
+    max-width: 420px;
+    width: 100%;
+    border-top: 6px solid var(--ambar);
+}
+.formulario .icone { font-size: 2.5rem; }
+.formulario h1 { font-size: 1.7rem; margin: 4px 0; }
 .formulario > p { color: var(--suave); margin-bottom: 20px; }
 
-label { display: block; margin: 14px 0 6px; font-weight: 700; font-size: .95rem; }
+label { display: block; font-weight: 600; margin: 14px 0 6px; }
+
 input, select, textarea {
-    width: 100%; padding: 12px 14px; font: inherit; color: inherit;
-    background: #fff; border: 1.5px solid var(--linha); border-radius: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--linha);
+    border-radius: var(--raio);
+    font: inherit;
+    background: #fff;
+    color: var(--tinta);
 }
-input:focus, select:focus, textarea:focus { border-color: var(--primaria); outline: none; box-shadow: 0 0 0 3px #bfe3df; }
+input:focus, select:focus, textarea:focus { border-color: var(--verde); outline: none; }
 textarea { min-height: 90px; resize: vertical; }
-form .botao, .reserva .botao { margin-top: 18px; }
 
-.link-formulario { margin-top: 18px; text-align: center; color: var(--suave); }
-.voltar { display: block; margin-top: 14px; text-align: center; text-decoration: none; color: var(--suave); }
+form .botao { margin-top: 22px; }
 
-.mensagem { min-height: 1.4em; margin-top: 12px; font-weight: 700; font-size: .95rem; }
-.mensagem.erro { color: var(--erro); }
-.mensagem.ok { color: var(--ok); }
+.link-formulario, .formulario p:not(:first-of-type) { margin-top: 18px; text-align: center; }
+.voltar { display: block; margin-top: 14px; text-align: center; color: var(--suave); text-decoration: none; }
+.voltar:hover { color: var(--verde); }
 
-/* CABEÇALHO */
+.mensagem { margin-top: 16px; padding: 12px 14px; border-radius: var(--raio); font-weight: 600; }
+.mensagem:empty { display: none; }
+.mensagem.erro { background: #fbe9e7; color: var(--erro); }
+.mensagem.sucesso { background: #e1f3ec; color: var(--verde-escuro); }
+
+/* ---------- Agenda ---------- */
+
 .cabecalho {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 16px 24px; background: var(--primaria); color: #fff;
+    background: var(--verde-escuro);
+    color: #fff;
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
 }
-.cabecalho h1 { font-size: 1.3rem; }
-.cabecalho p { opacity: .85; font-size: .9rem; }
+.cabecalho p { opacity: .8; }
+
 .botao-sair {
-    padding: 8px 18px; border: 2px solid #fff; border-radius: 8px;
-    background: transparent; color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+    padding: 10px 18px;
+    border: 2px solid #fff;
+    border-radius: var(--raio);
+    background: transparent;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
 }
-.botao-sair:hover { background: rgba(255,255,255,.15); }
+.botao-sair:hover { background: #fff; color: var(--verde-escuro); }
 
-/* AGENDA */
-.agenda-container { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
-.agenda-container section { background: var(--papel); border: 1px solid var(--linha); border-radius: 16px; padding: 24px; }
-.boas-vindas p { color: var(--suave); margin-top: 4px; }
+.agenda-container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+    display: grid;
+    gap: 20px;
+}
 
-.titulo-agenda { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.titulo-agenda h2 { font-size: 1.2rem; }
+.boas-vindas h2 { font-size: 1.5rem; }
+.boas-vindas p { color: var(--suave); }
+
+.calendario, .reserva, .minhas-reservas {
+    background: var(--papel);
+    border-radius: 16px;
+    padding: 22px;
+}
+
+.titulo-agenda {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
 .mes-botao {
-    width: 40px; height: 40px; border: 1.5px solid var(--linha); border-radius: 10px;
-    background: #fff; font-size: 1.1rem; cursor: pointer;
+    width: 42px; height: 42px;
+    border: 2px solid var(--linha);
+    border-radius: 50%;
+    background: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
 }
-.mes-botao:hover { background: #e0efed; }
+.mes-botao:hover { border-color: var(--verde); color: var(--verde); }
 
-.dias-semana, .dias { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.dias-semana span { text-align: center; font-size: .8rem; font-weight: 700; color: var(--suave); padding-bottom: 6px; }
+.dias-semana, .dias {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+.dias-semana { margin-bottom: 8px; text-align: center; font-weight: 700; color: var(--suave); font-size: .85rem; }
+
 .dia {
-    aspect-ratio: 1; border: 1.5px solid var(--linha); border-radius: 10px;
-    background: #fff; font: inherit; font-weight: 700; cursor: pointer;
+    aspect-ratio: 1;
+    border: 2px solid var(--linha);
+    border-radius: var(--raio);
+    background: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
 }
-.dia:hover:not(:disabled) { border-color: var(--primaria); background: #e0efed; }
-.dia:disabled { background: transparent; border-color: transparent; color: #aab6b4; cursor: not-allowed; }
-.dia.vazio { visibility: hidden; }
-.dia.hoje { border-color: var(--primaria); }
-.dia.selecionado { background: var(--primaria); border-color: var(--primaria); color: #fff; }
+.dia:hover:not(:disabled) { border-color: var(--verde); }
+.dia-hoje { border-color: var(--ambar); }
+.dia-selecionado { background: var(--verde); border-color: var(--verde); color: #fff; }
+.dia-passado { opacity: .35; cursor: not-allowed; }
 
-.reserva h2, .minhas-reservas h2 { font-size: 1.2rem; }
-#dataSelecionada { color: var(--suave); margin: 4px 0 16px; }
-.reserva.bloqueada .horarios { opacity: .5; pointer-events: none; }
+.reserva h2, .minhas-reservas h2 { margin-bottom: 8px; }
+#dataSelecionada { color: var(--suave); margin-bottom: 14px; }
 
-.horarios { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.horarios {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+}
 .horarios button {
-    padding: 12px 8px; font: inherit; font-weight: 700; cursor: pointer;
-    background: #fff; border: 1.5px solid var(--linha); border-radius: 10px;
+    padding: 12px 8px;
+    border: 2px solid var(--linha);
+    border-radius: var(--raio);
+    background: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
 }
-.horarios button:hover:not(:disabled) { border-color: var(--primaria); background: #e0efed; }
-.horarios button.selecionado { background: var(--primaria); border-color: var(--primaria); color: #fff; }
-.horarios button:disabled { background: #f1f3f3; color: #8a9896; text-decoration: line-through; cursor: not-allowed; }
+.horarios button:hover:not(:disabled) { border-color: var(--verde); }
+.horarios button.selecionado { background: var(--verde); border-color: var(--verde); color: #fff; }
+.horarios button.ocupado { background: #f1f1f1; color: #999; text-decoration: line-through; cursor: not-allowed; }
 
-/* MINHAS RESERVAS */
+.reserva .botao { margin-top: 20px; }
+
 .reserva-item {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 14px 0; border-top: 1px solid var(--linha);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    border-top: 1px solid var(--linha);
 }
-.minhas-reservas h2 + div { margin-top: 12px; }
-.reserva-item:first-child { border-top: 0; }
-.reserva-item strong { display: block; }
-.reserva-item span { color: var(--suave); font-size: .92rem; }
-.cancelar {
-    padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer;
-    color: var(--erro); background: #fff; border: 1.5px solid var(--erro); border-radius: 8px;
+.reserva-item p { color: var(--suave); font-size: .95rem; }
+
+.botao-cancelar {
+    padding: 8px 14px;
+    border: 2px solid var(--erro);
+    border-radius: var(--raio);
+    background: transparent;
+    color: var(--erro);
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
 }
-.cancelar:hover { background: #fdecea; }
+.botao-cancelar:hover { background: var(--erro); color: #fff; }
 
 @media (max-width: 480px) {
-    .agenda-container section { padding: 18px; }
+    .calendario, .reserva, .minhas-reservas { padding: 16px; }
     .reserva-item { flex-direction: column; align-items: flex-start; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
