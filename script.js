@@ -3,6 +3,15 @@
 const EMAIL_AVISO = "alinesouzaa@prof.educacao.sp.gov.br";
 const URL_EMAIL = "https://formsubmit.co/ajax/" + EMAIL_AVISO;
 
+/* Envia um aviso para o e-mail do administrador (nunca envia senhas) */
+function enviarAviso(assunto, dados) {
+    return fetch(URL_EMAIL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(Object.assign({ _subject: assunto, _template: "table", _captcha: "false" }, dados))
+    }).catch(e => console.warn("Não foi possível enviar o aviso por e-mail.", e));
+}
+
 /* ---------- Armazenamento (no navegador) ---------- */
 
 function ler(chave, padrao) {
@@ -259,6 +268,16 @@ function confirmarReserva() {
     });
     gravar("reservas", reservas);
 
+    enviarAviso("Nova reserva do laboratório - " + formatarBR(dataEscolhida), {
+        Professor: logado.nome,
+        Email: logado.email,
+        Data: formatarBR(dataEscolhida),
+        Horario: horarioEscolhido.inicio + " - " + horarioEscolhido.fim,
+        Turma: turma,
+        Laboratorio: laboratorio,
+        Motivo: motivo
+    });
+
     document.getElementById("motivo").value = "";
     document.getElementById("turma").value = "";
     horarioEscolhido = null;
@@ -269,7 +288,18 @@ function confirmarReserva() {
 
 function cancelarReserva(id) {
     if (!confirm("Deseja cancelar esta reserva?")) return;
-    gravar("reservas", ler("reservas", []).filter(r => r.id !== id));
+    const todas = ler("reservas", []);
+    const cancelada = todas.find(r => r.id === id);
+    gravar("reservas", todas.filter(r => r.id !== id));
+    if (cancelada) {
+        enviarAviso("Reserva CANCELADA - " + formatarBR(cancelada.data), {
+            Professor: cancelada.nome,
+            Email: cancelada.email,
+            Data: formatarBR(cancelada.data),
+            Horario: cancelada.inicio + " - " + cancelada.fim,
+            Turma: cancelada.turma
+        });
+    }
     atualizarHorarios();
     listarReservas();
 }
