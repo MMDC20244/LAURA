@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Perfil privado: cada usuário só pode consultar o próprio perfil.
+    match /USUARIOS/{uid} {
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.uid == uid
+                    && request.resource.data.email == request.auth.token.email;
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow update, delete: if false;
+    }
+
+    // Dados privados da reserva: o dono pode consultar, criar e cancelar a própria reserva.
+    match /RESERVAS/{reservaId} {
+      allow read: if request.auth != null
+                  && resource.data.uid == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.keys().hasAll([
+                      'uid', 'data', 'inicio', 'fim', 'turma',
+                      'laboratorio', 'motivo', 'criadoEm'
+                    ]);
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // A coleção de ocupação contém somente data/horário/laboratório e uid,
+    // sem nome, e-mail ou motivo. Usuários autenticados podem ver horários ocupados.
+    match /OCUPACAO/{slotId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.keys().hasAll([
+                      'uid', 'data', 'inicio', 'fim', 'laboratorio', 'criadoEm'
+                    ]);
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+  }
+}

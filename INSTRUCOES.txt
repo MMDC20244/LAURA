@@ -1,0 +1,20 @@
+AGENDA LAURA — MIGRAÇÃO PARA FIREBASE
+
+Arquivos:
+- script.js: substitui o script atual. Usa Firebase Authentication e Cloud Firestore via módulos CDN, mantendo os HTML atuais com <script src="script.js"></script>.
+- firestore.rules: regras de segurança para publicar na aba Regras do Cloud Firestore.
+
+ANTES DE PUBLICAR:
+1. No Firebase Authentication, confirme que E-mail/senha está ativado.
+2. Em Authentication > Configurações > Domínios autorizados, inclua laura-aluno.vercel.app.
+3. No Firestore > Regras, substitua as regras pelas de firestore.rules e clique em Publicar.
+4. No GitHub, abra MMDC20244/LAURA/script.js, clique no lápis, substitua TODO o conteúdo pelo novo script.js, confirme a alteração (Commit changes). O Vercel deve iniciar novo deploy automaticamente.
+5. Teste cadastro com uma conta de teste, depois faça login, crie uma reserva e cancele-a.
+6. A coleção manual RESERVAS que foi criada com campos maiúsculos é apenas um documento de teste antigo. O novo script usa documentos com uid e campos minúsculos. Pode apagar o documento de teste manual no Firestore depois, mas não é necessário para o funcionamento.
+
+IMPORTANTE:
+- Não compartilhe senhas.
+- As regras protegem os perfis e detalhes das reservas. A coleção OCUPACAO expõe apenas horários ocupados e laboratório aos usuários autenticados para evitar reservas duplicadas.
+- O envio de e-mails por FormSubmit é separado do Firebase e pode exigir confirmação/ajustes próprios.
+- A API key Firebase do app Web é usada no navegador; não coloque chaves de serviço privadas no JavaScript.
+- Faça o teste após o deploy; se aparecer erro, envie a mensagem do Console do navegador sem incluir senhas ou tokens.

@@ -1,355 +1,539 @@
-/* ===== Agenda Digital - script.js ===== */
+/* Agenda Digital - Firebase Authentication + Cloud Firestore
+   Compatível com HTML/CSS/JS puro, sem npm e sem alterar as tags <script> existentes.
+   Cole este arquivo como script.js no repositório LAURA.
+*/
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC90WnvPP5llFBGwGmbrHIUbhLPTbU_Rjg",
+  authDomain: "agenda-a8d79.firebaseapp.com",
+  projectId: "agenda-a8d79",
+  storageBucket: "agenda-a8d79.firebasestorage.app",
+  messagingSenderId: "305074527245",
+  appId: "1:305074527245:web:4503ff2f1a7008828c0944"
+};
 
 const EMAIL_AVISO = "alinesouzaa@prof.educacao.sp.gov.br";
 const URL_EMAIL = "https://formsubmit.co/ajax/" + EMAIL_AVISO;
 
-/* Envia um aviso para o e-mail do administrador (nunca envia senhas) */
-function enviarAviso(assunto, dados) {
-    return fetch(URL_EMAIL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify(Object.assign({ _subject: assunto, _template: "table", _captcha: "false" }, dados))
-    }).catch(e => console.warn("Não foi possível enviar o aviso por e-mail.", e));
-}
-
-/* ---------- Armazenamento (no navegador) ---------- */
-
-function ler(chave, padrao) {
-    try {
-        const v = localStorage.getItem(chave);
-        return v ? JSON.parse(v) : padrao;
-    } catch (e) {
-        return padrao;
-    }
-}
-
-function gravar(chave, valor) {
-    localStorage.setItem(chave, JSON.stringify(valor));
-}
-
-async function gerarHash(texto) {
-    if (window.crypto && crypto.subtle) {
-        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
-        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-    }
-    return texto;
-}
+let firebaseServices;
+const firebaseReady = (async () => {
+  const [appSdk, authSdk, dbSdk] = await Promise.all([
+    import("https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js"),
+    import("https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js")
+  ]);
+  const app = appSdk.initializeApp(FIREBASE_CONFIG);
+  firebaseServices = {
+    auth: authSdk.getAuth(app),
+    db: dbSdk.getFirestore(app),
+    ...authSdk,
+    ...dbSdk
+  };
+  return firebaseServices;
+})();
 
 function mostrarMensagem(texto, tipo) {
-    const el = document.getElementById("mensagem");
-    if (!el) { alert(texto); return; }
-    el.textContent = texto;
-    el.className = "mensagem " + tipo;
+  const el = document.getElementById("mensagem");
+  if (!el) {
+    alert(texto);
+    return;
+  }
+  el.textContent = texto;
+  el.className = "mensagem " + (tipo || "");
+}
+
+function mensagemErroFirebase(error) {
+  const codigos = {
+    "auth/email-already-in-use": "Este e-mail já tem cadastro. Faça login.",
+    "auth/invalid-email": "Digite um e-mail válido.",
+    "auth/weak-password": "A senha precisa ter pelo menos 6 caracteres.",
+    "auth/invalid-credential": "E-mail ou senha incorretos.",
+    "auth/user-not-found": "E-mail ou senha incorretos.",
+    "auth/wrong-password": "E-mail ou senha incorretos.",
+    "auth/too-many-requests": "Muitas tentativas. Aguarde um pouco e tente novamente.",
+    "permission-denied": "O Firebase bloqueou esta operação. Confira as regras do Firestore.",
+    "unavailable": "Não foi possível conectar ao Firebase. Verifique sua internet e tente novamente."
+  };
+  return codigos[error?.code] || error?.message || "Ocorreu um erro. Tente novamente.";
+}
+
+/* Envia aviso por e-mail sem incluir senhas. O envio de e-mail é independente do banco. */
+async function enviarAviso(assunto, dados) {
+  try {
+    await fetch(URL_EMAIL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(Object.assign({
+        _subject: assunto,
+        _template: "table",
+        _captcha: "false"
+      }, dados))
+    });
+  } catch (e) {
+    console.warn("Não foi possível enviar o aviso por e-mail.", e);
+  }
 }
 
 /* ---------- Cadastro ---------- */
-
 async function fazerCadastro(event) {
-    event.preventDefault();
+  event.preventDefault();
+  const botao = event.target.querySelector('button[type="submit"]');
+  const tipo = document.getElementById("tipo").value;
+  const nome = document.getElementById("nome").value.trim();
+  const email = document.getElementById("identificacao").value.trim().toLowerCase();
+  const senha = document.getElementById("senha").value;
 
-    const tipo = document.getElementById("tipo").value;
-    const nome = document.getElementById("nome").value.trim();
-    const email = document.getElementById("identificacao").value.trim().toLowerCase();
-    const senha = document.getElementById("senha").value;
+  if (nome.split(/\s+/).filter(Boolean).length < 2) {
+    mostrarMensagem("Digite seu nome completo.", "erro");
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    mostrarMensagem("Digite um e-mail válido.", "erro");
+    return;
+  }
+  if (senha.length < 6) {
+    mostrarMensagem("A senha precisa ter pelo menos 6 caracteres.", "erro");
+    return;
+  }
+  if (!tipo) {
+    mostrarMensagem("Selecione o tipo de usuário.", "erro");
+    return;
+  }
 
-    if (nome.split(" ").length < 2) {
-        mostrarMensagem("Digite seu nome completo.", "erro");
-        return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        mostrarMensagem("Digite um e-mail válido.", "erro");
-        return;
-    }
-    if (senha.length < 6) {
-        mostrarMensagem("A senha precisa ter pelo menos 6 caracteres.", "erro");
-        return;
-    }
-
-    const usuarios = ler("usuarios", []);
-    if (usuarios.some(u => u.email === email)) {
-        mostrarMensagem("Este e-mail já tem cadastro. Faça login.", "erro");
-        return;
-    }
-
-    const botao = event.target.querySelector("button[type=submit]");
+  if (botao) {
     botao.disabled = true;
     botao.textContent = "Criando conta...";
+  }
 
-    const dataCadastro = new Date().toLocaleString("pt-BR");
+  try {
+    const f = await firebaseReady;
+    const credencial = await f.createUserWithEmailAndPassword(f.auth, email, senha);
+    await f.updateProfile(credencial.user, { displayName: nome });
 
-    usuarios.push({
-        tipo: tipo,
-        nome: nome,
-        email: email,
-        senha: await gerarHash(senha),
-        criadoEm: dataCadastro
+    await f.setDoc(f.doc(f.db, "USUARIOS", credencial.user.uid), {
+      uid: credencial.user.uid,
+      nome,
+      email,
+      tipo,
+      criadoEm: f.serverTimestamp()
     });
-    gravar("usuarios", usuarios);
 
-    // Aviso por e-mail (a senha nunca é enviada)
-    try {
-        await fetch(URL_EMAIL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify({
-                _subject: "Novo cadastro na Agenda Digital",
-                _template: "table",
-                _captcha: "false",
-                Tipo: tipo,
-                Nome: nome,
-                Email: email,
-                Data: dataCadastro
-            })
-        });
-    } catch (e) {
-        console.warn("Não foi possível enviar o aviso por e-mail.", e);
-    }
+    await enviarAviso("Novo cadastro na Agenda Digital", {
+      Tipo: tipo,
+      Nome: nome,
+      Email: email,
+      Data: new Date().toLocaleString("pt-BR")
+    });
 
     mostrarMensagem("Conta criada com sucesso! Indo para o login...", "sucesso");
-    setTimeout(() => { window.location.href = "login.html"; }, 1500);
+    setTimeout(() => { window.location.href = "login.html"; }, 1200);
+  } catch (error) {
+    console.error(error);
+    mostrarMensagem(mensagemErroFirebase(error), "erro");
+  } finally {
+    if (botao) {
+      botao.disabled = false;
+      botao.textContent = "Criar minha conta";
+    }
+  }
 }
 
-/* ---------- Login ---------- */
-
+/* ---------- Login e sessão ---------- */
 async function fazerLogin(event) {
-    event.preventDefault();
+  event.preventDefault();
+  const campoUsuario = document.getElementById("loginUsuario");
+  const email = campoUsuario.value.trim().toLowerCase();
+  const senha = document.getElementById("loginSenha").value;
+  const botao = event.target.querySelector('button[type="submit"]');
 
-    const usuario = document.getElementById("loginUsuario").value.trim().toLowerCase();
-    const senha = await gerarHash(document.getElementById("loginSenha").value);
+  if (botao) {
+    botao.disabled = true;
+    botao.textContent = "Entrando...";
+  }
 
-    const encontrado = ler("usuarios", []).find(u =>
-        (u.email === usuario || (u.ra && u.ra.toLowerCase() === usuario)) && u.senha === senha
-    );
+  try {
+    const f = await firebaseReady;
+    const credencial = await f.signInWithEmailAndPassword(f.auth, email, senha);
+    const perfilRef = f.doc(f.db, "USUARIOS", credencial.user.uid);
+    const perfilSnap = await f.getDoc(perfilRef);
 
-    if (!encontrado) {
-        mostrarMensagem("E-mail ou senha incorretos.", "erro");
-        return;
+    if (!perfilSnap.exists()) {
+      await f.signOut(f.auth);
+      throw new Error("Sua conta não possui um perfil de usuário. Entre em contato com a administração.");
     }
 
-    gravar("usuarioLogado", { nome: encontrado.nome, email: encontrado.email });
     window.location.href = "agenda.html";
+  } catch (error) {
+    console.error(error);
+    mostrarMensagem(mensagemErroFirebase(error), "erro");
+  } finally {
+    if (botao) {
+      botao.disabled = false;
+      botao.textContent = "Entrar";
+    }
+  }
 }
 
-function sair() {
-    localStorage.removeItem("usuarioLogado");
-    window.location.href = "index.html";
+async function sair() {
+  try {
+    const f = await firebaseReady;
+    await f.signOut(f.auth);
+  } catch (error) {
+    console.error(error);
+  }
+  window.location.href = "index.html";
 }
 
 /* ---------- Agenda ---------- */
-
-const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
 
 let mesAtual = new Date().getMonth();
 let anoAtual = new Date().getFullYear();
-let dataEscolhida = null;   // formato AAAA-MM-DD
-let horarioEscolhido = null; // { inicio, fim }
+let dataEscolhida = null;
+let horarioEscolhido = null;
+let perfilAtual = null;
+let reservasAtuais = [];
 
 function formatarISO(ano, mes, dia) {
-    return ano + "-" + String(mes + 1).padStart(2, "0") + "-" + String(dia).padStart(2, "0");
+  return ano + "-" + String(mes + 1).padStart(2, "0") + "-" + String(dia).padStart(2, "0");
 }
 
 function formatarBR(iso) {
-    const [a, m, d] = iso.split("-");
-    return d + "/" + m + "/" + a;
+  const [a, m, d] = iso.split("-");
+  return d + "/" + m + "/" + a;
 }
 
 function desenharCalendario() {
-    const grade = document.getElementById("diasCalendario");
-    document.getElementById("mesAno").textContent = MESES[mesAtual] + " " + anoAtual;
-    grade.innerHTML = "";
+  const grade = document.getElementById("diasCalendario");
+  const titulo = document.getElementById("mesAno");
+  if (!grade || !titulo) return;
 
-    const hoje = new Date();
-    const hojeISO = formatarISO(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-    const totalDias = new Date(anoAtual, mesAtual + 1, 0).getDate();
+  titulo.textContent = MESES[mesAtual] + " " + anoAtual;
+  grade.innerHTML = "";
 
-    // Quantos espaços vazios antes do dia 1 (colunas: SEG=0 ... SEX=4)
-    const primeiro = new Date(anoAtual, mesAtual, 1).getDay(); // 0=dom
-    let vazios = primeiro === 0 || primeiro === 6 ? 0 : primeiro - 1;
-    for (let i = 0; i < vazios; i++) {
-        grade.appendChild(document.createElement("span"));
+  const hoje = new Date();
+  const hojeISO = formatarISO(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const totalDias = new Date(anoAtual, mesAtual + 1, 0).getDate();
+  const primeiro = new Date(anoAtual, mesAtual, 1).getDay();
+  const vazios = (primeiro === 0 || primeiro === 6) ? 0 : primeiro - 1;
+
+  for (let i = 0; i < vazios; i++) grade.appendChild(document.createElement("span"));
+
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const diaSemana = new Date(anoAtual, mesAtual, dia).getDay();
+    if (diaSemana === 0 || diaSemana === 6) continue;
+
+    const iso = formatarISO(anoAtual, mesAtual, dia);
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "dia";
+    botao.textContent = dia;
+
+    if (iso < hojeISO) {
+      botao.disabled = true;
+      botao.classList.add("dia-passado");
     }
+    if (iso === hojeISO) botao.classList.add("dia-hoje");
+    if (iso === dataEscolhida) botao.classList.add("dia-selecionado");
 
-    for (let dia = 1; dia <= totalDias; dia++) {
-        const diaSemana = new Date(anoAtual, mesAtual, dia).getDay();
-        if (diaSemana === 0 || diaSemana === 6) continue; // só segunda a sexta
-
-        const iso = formatarISO(anoAtual, mesAtual, dia);
-        const botao = document.createElement("button");
-        botao.type = "button";
-        botao.className = "dia";
-        botao.textContent = dia;
-
-        if (iso < hojeISO) {
-            botao.disabled = true;
-            botao.classList.add("dia-passado");
-        }
-        if (iso === hojeISO) botao.classList.add("dia-hoje");
-        if (iso === dataEscolhida) botao.classList.add("dia-selecionado");
-
-        botao.onclick = () => escolherData(iso);
-        grade.appendChild(botao);
-    }
+    botao.onclick = () => escolherData(iso);
+    grade.appendChild(botao);
+  }
 }
 
 function mesAnterior() {
-    mesAtual--;
-    if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
-    desenharCalendario();
+  mesAtual--;
+  if (mesAtual < 0) { mesAtual = 11; anoAtual--; }
+  desenharCalendario();
 }
 
 function proximoMes() {
-    mesAtual++;
-    if (mesAtual > 11) { mesAtual = 0; anoAtual++; }
-    desenharCalendario();
+  mesAtual++;
+  if (mesAtual > 11) { mesAtual = 0; anoAtual++; }
+  desenharCalendario();
 }
 
-function escolherData(iso) {
-    dataEscolhida = iso;
-    horarioEscolhido = null;
-    document.getElementById("dataSelecionada").textContent = "Data escolhida: " + formatarBR(iso);
-    desenharCalendario();
-    atualizarHorarios();
+async function escolherData(iso) {
+  dataEscolhida = iso;
+  horarioEscolhido = null;
+  const label = document.getElementById("dataSelecionada");
+  if (label) label.textContent = "Data escolhida: " + formatarBR(iso);
+  desenharCalendario();
+  await atualizarHorarios();
 }
 
-function atualizarHorarios() {
-    const reservas = ler("reservas", []);
-    document.querySelectorAll(".horarios button").forEach(btn => {
-        btn.classList.remove("selecionado", "ocupado");
-        btn.disabled = false;
-        const ocupado = dataEscolhida && reservas.some(r =>
-            r.data === dataEscolhida && r.inicio === btn.dataset.inicio
-        );
-        if (ocupado) {
-            btn.classList.add("ocupado");
-            btn.disabled = true;
-        }
-    });
+async function atualizarHorarios() {
+  const f = await firebaseReady;
+  const container = document.getElementById("horarios");
+  if (!container) return;
+
+  let ocupacoes = [];
+  try {
+    if (dataEscolhida) {
+      const q = f.query(
+        f.collection(f.db, "OCUPACAO"),
+        f.where("data", "==", dataEscolhida)
+      );
+      const snap = await f.getDocs(q);
+      ocupacoes = snap.docs.map(d => d.data());
+    }
+  } catch (error) {
+    console.error(error);
+    mostrarMensagem("Não foi possível consultar os horários. Confira as regras do Firestore.", "erro");
+    return;
+  }
+
+  container.querySelectorAll("button").forEach(btn => {
+    btn.classList.remove("selecionado", "ocupado");
+    btn.disabled = false;
+    const ocupado = ocupacoes.some(r => r.inicio === btn.dataset.inicio);
+    if (ocupado) {
+      btn.classList.add("ocupado");
+      btn.disabled = true;
+    }
+  });
 }
 
 function selecionarHorario(btn) {
-    if (!dataEscolhida) {
-        alert("Escolha uma data no calendário primeiro.");
-        return;
-    }
-    document.querySelectorAll(".horarios button").forEach(b => b.classList.remove("selecionado"));
-    btn.classList.add("selecionado");
-    horarioEscolhido = { inicio: btn.dataset.inicio, fim: btn.dataset.fim };
+  if (!dataEscolhida) {
+    alert("Escolha uma data no calendário primeiro.");
+    return;
+  }
+  if (btn.disabled || btn.classList.contains("ocupado")) {
+    alert("Este horário já está ocupado. Escolha outro.");
+    return;
+  }
+  document.querySelectorAll(".horarios button").forEach(b => b.classList.remove("selecionado"));
+  btn.classList.add("selecionado");
+  horarioEscolhido = { inicio: btn.dataset.inicio, fim: btn.dataset.fim };
 }
 
-function confirmarReserva() {
-    const logado = ler("usuarioLogado", null);
-    const turma = document.getElementById("turma").value;
-    const laboratorio = document.getElementById("laboratorio").value;
-    const motivo = document.getElementById("motivo").value.trim();
+async function confirmarReserva() {
+  const f = await firebaseReady;
+  const user = f.auth.currentUser;
+  const turma = document.getElementById("turma").value;
+  const laboratorio = document.getElementById("laboratorio").value;
+  const motivo = document.getElementById("motivo").value.trim();
 
-    if (!dataEscolhida) return alert("Escolha uma data.");
-    if (!horarioEscolhido) return alert("Escolha um horário.");
-    if (!turma) return alert("Selecione a turma.");
-    if (!motivo) return alert("Digite o motivo da reserva.");
+  if (!user || !perfilAtual) {
+    alert("Sua sessão expirou. Entre novamente.");
+    window.location.href = "login.html";
+    return;
+  }
+  if (!dataEscolhida) return alert("Escolha uma data.");
+  if (!horarioEscolhido) return alert("Escolha um horário.");
+  if (!turma) return alert("Selecione a turma.");
+  if (!motivo) return alert("Digite o motivo da reserva.");
 
-    const reservas = ler("reservas", []);
-    if (reservas.some(r => r.data === dataEscolhida && r.inicio === horarioEscolhido.inicio)) {
-        alert("Este horário acabou de ser reservado. Escolha outro.");
-        atualizarHorarios();
-        return;
-    }
+  const botao = document.querySelector('#areaReserva button.botao');
+  if (botao) { botao.disabled = true; botao.textContent = "Salvando reserva..."; }
 
-    reservas.push({
-        id: Date.now(),
-        email: logado.email,
-        nome: logado.nome,
+  const slotId = dataEscolhida + "_" + horarioEscolhido.inicio.replace(":", "-");
+  const ocupacaoRef = f.doc(f.db, "OCUPACAO", slotId);
+  const reservaRef = f.doc(f.collection(f.db, "RESERVAS"));
+
+  try {
+    await f.runTransaction(f.db, async transaction => {
+      const ocupacaoSnap = await transaction.get(ocupacaoRef);
+      if (ocupacaoSnap.exists()) throw new Error("SLOT_OCUPADO");
+
+      transaction.set(ocupacaoRef, {
+        uid: user.uid,
         data: dataEscolhida,
         inicio: horarioEscolhido.inicio,
         fim: horarioEscolhido.fim,
-        turma: turma,
-        laboratorio: laboratorio,
-        motivo: motivo
-    });
-    gravar("reservas", reservas);
+        laboratorio,
+        criadoEm: f.serverTimestamp()
+      });
 
-    enviarAviso("Nova reserva do laboratório - " + formatarBR(dataEscolhida), {
-        Professor: logado.nome,
-        Email: logado.email,
-        Data: formatarBR(dataEscolhida),
-        Horario: horarioEscolhido.inicio + " - " + horarioEscolhido.fim,
-        Turma: turma,
-        Laboratorio: laboratorio,
-        Motivo: motivo
+      transaction.set(reservaRef, {
+        uid: user.uid,
+        data: dataEscolhida,
+        inicio: horarioEscolhido.inicio,
+        fim: horarioEscolhido.fim,
+        turma,
+        laboratorio,
+        motivo,
+        criadoEm: f.serverTimestamp()
+      });
     });
 
+    await enviarAviso("Nova reserva do laboratório - " + formatarBR(dataEscolhida), {
+      Professor: perfilAtual.nome,
+      Email: perfilAtual.email,
+      Data: formatarBR(dataEscolhida),
+      Horario: horarioEscolhido.inicio + " - " + horarioEscolhido.fim,
+      Turma: turma,
+      Laboratorio: laboratorio,
+      Motivo: motivo
+    });
+
+    const dataReserva = dataEscolhida;
     document.getElementById("motivo").value = "";
     document.getElementById("turma").value = "";
     horarioEscolhido = null;
-    atualizarHorarios();
-    listarReservas();
+    await atualizarHorarios();
+    await listarReservas();
     alert("Reserva confirmada!");
-}
-
-function cancelarReserva(id) {
-    if (!confirm("Deseja cancelar esta reserva?")) return;
-    const todas = ler("reservas", []);
-    const cancelada = todas.find(r => r.id === id);
-    gravar("reservas", todas.filter(r => r.id !== id));
-    if (cancelada) {
-        enviarAviso("Reserva CANCELADA - " + formatarBR(cancelada.data), {
-            Professor: cancelada.nome,
-            Email: cancelada.email,
-            Data: formatarBR(cancelada.data),
-            Horario: cancelada.inicio + " - " + cancelada.fim,
-            Turma: cancelada.turma
-        });
+  } catch (error) {
+    console.error(error);
+    if (error.message === "SLOT_OCUPADO" || error.code === "already-exists") {
+      alert("Este horário acabou de ser reservado. Escolha outro.");
+      await atualizarHorarios();
+    } else {
+      alert("Não foi possível salvar a reserva: " + mensagemErroFirebase(error));
     }
-    atualizarHorarios();
-    listarReservas();
+  } finally {
+    if (botao) { botao.disabled = false; botao.textContent = "Confirmar reserva"; }
+  }
 }
 
-function listarReservas() {
-    const logado = ler("usuarioLogado", null);
-    const lista = document.getElementById("listaReservas");
-    const minhas = ler("reservas", [])
-        .filter(r => r.email === logado.email)
-        .sort((a, b) => (a.data + a.inicio).localeCompare(b.data + b.inicio));
+async function cancelarReserva(id) {
+  if (!confirm("Deseja cancelar esta reserva?")) return;
+  const f = await firebaseReady;
+  const user = f.auth.currentUser;
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const reservaRef = f.doc(f.db, "RESERVAS", id);
+  try {
+    await f.runTransaction(f.db, async transaction => {
+      const reservaSnap = await transaction.get(reservaRef);
+      if (!reservaSnap.exists()) throw new Error("RESERVA_NAO_ENCONTRADA");
+      const reserva = reservaSnap.data();
+      if (reserva.uid !== user.uid) throw new Error("SEM_PERMISSAO");
+
+      const slotId = reserva.data + "_" + reserva.inicio.replace(":", "-");
+      const ocupacaoRef = f.doc(f.db, "OCUPACAO", slotId);
+      const ocupacaoSnap = await transaction.get(ocupacaoRef);
+
+      transaction.delete(reservaRef);
+      if (ocupacaoSnap.exists() && ocupacaoSnap.data().uid === user.uid) {
+        transaction.delete(ocupacaoRef);
+      }
+    });
+
+    // A reserva já foi apagada; o aviso usa os dados guardados na lista carregada.
+    const cancelada = reservasAtuais.find(r => r.id === id);
+    if (cancelada) {
+      await enviarAviso("Reserva CANCELADA - " + formatarBR(cancelada.data), {
+        Professor: perfilAtual?.nome || "",
+        Email: perfilAtual?.email || "",
+        Data: formatarBR(cancelada.data),
+        Horario: cancelada.inicio + " - " + cancelada.fim,
+        Turma: cancelada.turma,
+        Laboratorio: cancelada.laboratorio
+      });
+    }
+    await atualizarHorarios();
+    await listarReservas();
+    alert("Reserva cancelada.");
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível cancelar a reserva: " + mensagemErroFirebase(error));
+  }
+}
+
+async function listarReservas() {
+  const f = await firebaseReady;
+  const user = f.auth.currentUser;
+  const lista = document.getElementById("listaReservas");
+  if (!lista || !user) return;
+
+  try {
+    const q = f.query(
+      f.collection(f.db, "RESERVAS"),
+      f.where("uid", "==", user.uid)
+    );
+    const snap = await f.getDocs(q);
+    const minhas = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.data + a.inicio).localeCompare(b.data + b.inicio));
+    reservasAtuais = minhas;
 
     if (minhas.length === 0) {
-        lista.innerHTML = "<p>Você ainda não possui reservas.</p>";
-        return;
+      lista.innerHTML = "<p>Você ainda não possui reservas.</p>";
+      return;
     }
 
     lista.innerHTML = "";
     minhas.forEach(r => {
-        const item = document.createElement("div");
-        item.className = "reserva-item";
+      const item = document.createElement("div");
+      item.className = "reserva-item";
 
-        const info = document.createElement("div");
-        const titulo = document.createElement("strong");
-        titulo.textContent = formatarBR(r.data) + " · " + r.inicio + " - " + r.fim;
-        const detalhe = document.createElement("p");
-        detalhe.textContent = r.turma + " · " + r.laboratorio + " · " + r.motivo;
-        info.append(titulo, detalhe);
+      const info = document.createElement("div");
+      const titulo = document.createElement("strong");
+      titulo.textContent = formatarBR(r.data) + " · " + r.inicio + " - " + r.fim;
+      const detalhe = document.createElement("p");
+      detalhe.textContent = r.turma + " · " + r.laboratorio + " · " + r.motivo;
+      info.append(titulo, detalhe);
 
-        const cancelar = document.createElement("button");
-        cancelar.className = "botao-cancelar";
-        cancelar.textContent = "Cancelar";
-        cancelar.onclick = () => cancelarReserva(r.id);
+      const cancelar = document.createElement("button");
+      cancelar.className = "botao-cancelar";
+      cancelar.textContent = "Cancelar";
+      cancelar.onclick = () => cancelarReserva(r.id);
 
-        item.append(info, cancelar);
-        lista.appendChild(item);
+      item.append(info, cancelar);
+      lista.appendChild(item);
     });
+  } catch (error) {
+    console.error(error);
+    lista.innerHTML = "<p>Não foi possível carregar suas reservas. Confira as regras do Firestore.</p>";
+  }
 }
 
 /* ---------- Inicialização ---------- */
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const f = await firebaseReady;
 
-document.addEventListener("DOMContentLoaded", () => {
     if (document.getElementById("diasCalendario")) {
-        const logado = ler("usuarioLogado", null);
-        if (!logado) {
+      f.onAuthStateChanged(f.auth, async user => {
+        if (!user) {
+          window.location.href = "login.html";
+          return;
+        }
+
+        try {
+          const perfilSnap = await f.getDoc(f.doc(f.db, "USUARIOS", user.uid));
+          if (!perfilSnap.exists()) {
+            await f.signOut(f.auth);
             window.location.href = "login.html";
             return;
+          }
+
+          perfilAtual = perfilSnap.data();
+          document.getElementById("nomeUsuario").textContent = (perfilAtual.nome || user.displayName || "Professor").split(" ")[0];
+          desenharCalendario();
+          await atualizarHorarios();
+          await listarReservas();
+        } catch (error) {
+          console.error(error);
+          mostrarMensagem("Erro ao carregar sua conta no Firebase. Confira as regras do Firestore.", "erro");
         }
-        document.getElementById("nomeUsuario").textContent = logado.nome.split(" ")[0];
-        desenharCalendario();
-        atualizarHorarios();
-        listarReservas();
+      });
     }
+  } catch (error) {
+    console.error("Falha ao iniciar Firebase:", error);
+    mostrarMensagem("Não foi possível iniciar o Firebase. Confira a configuração e a conexão.", "erro");
+  }
+});
+
+/* Mantém compatibilidade com os onclick e onsubmit que já existem nos HTML. */
+Object.assign(window, {
+  fazerCadastro,
+  fazerLogin,
+  sair,
+  mesAnterior,
+  proximoMes,
+  escolherData,
+  selecionarHorario,
+  confirmarReserva,
+  cancelarReserva,
+  listarReservas,
+  desenharCalendario,
+  atualizarHorarios
 });
