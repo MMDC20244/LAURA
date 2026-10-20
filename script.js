@@ -195,6 +195,7 @@ let dataEscolhida = null;
 let horarioEscolhido = null;
 let perfilAtual = null;
 let reservasAtuais = [];
+let statusDia = null; // 'livre' ou 'lotado' para o dia selecionado
 
 function formatarISO(ano, mes, dia) {
   return ano + "-" + String(mes + 1).padStart(2, "0") + "-" + String(dia).padStart(2, "0");
@@ -231,12 +232,13 @@ function desenharCalendario() {
     botao.className = "dia";
     botao.textContent = dia;
 
-    if (iso < hojeISO) {
-      botao.disabled = true;
-      botao.classList.add("dia-passado");
-    }
+    // Dias passados ficam clicáveis só para consulta (ver o que foi usado ou não).
+    if (iso < hojeISO) botao.classList.add("dia-passado");
     if (iso === hojeISO) botao.classList.add("dia-hoje");
-    if (iso === dataEscolhida) botao.classList.add("dia-selecionado");
+    if (iso === dataEscolhida) {
+      botao.classList.add("dia-selecionado");
+      if (statusDia) botao.classList.add("dia-" + statusDia);
+    }
 
     botao.onclick = () => escolherData(iso);
     grade.appendChild(botao);
@@ -258,6 +260,7 @@ function proximoMes() {
 async function escolherData(iso) {
   dataEscolhida = iso;
   horarioEscolhido = null;
+  statusDia = null;
   const label = document.getElementById("dataSelecionada");
   if (label) label.textContent = "Data escolhida: " + formatarBR(iso);
   desenharCalendario();
@@ -285,15 +288,37 @@ async function atualizarHorarios() {
     return;
   }
 
+  const agora = new Date();
+  const hojeISO = formatarISO(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const horaAgora = String(agora.getHours()).padStart(2, "0") + ":" + String(agora.getMinutes()).padStart(2, "0");
+  let livres = 0;
+
   container.querySelectorAll("button").forEach(btn => {
-    btn.classList.remove("selecionado", "ocupado");
+    btn.classList.remove("selecionado", "ocupado", "livre", "nao-usado", "encerrado");
     btn.disabled = false;
-    const ocupado = ocupacoes.some(r => r.inicio === btn.dataset.inicio);
-    if (ocupado) {
-      btn.classList.add("ocupado");
+    if (!dataEscolhida) return;
+
+    const oc = ocupacoes.find(r => r.inicio === btn.dataset.inicio);
+    const passou = dataEscolhida < hojeISO ||
+      (dataEscolhida === hojeISO && btn.dataset.fim <= horaAgora);
+
+    if (oc && oc.status === "nao_usou") {
+      btn.classList.add("nao-usado");   // AMARELO: reservou e não usou
       btn.disabled = true;
+    } else if (oc) {
+      btn.classList.add("ocupado");     // VERMELHO: ocupado
+      btn.disabled = true;
+    } else if (passou) {
+      btn.classList.add("encerrado");   // horário que já passou
+      btn.disabled = true;
+    } else {
+      btn.classList.add("livre");       // VERDE: livre
+      livres++;
     }
   });
+
+  statusDia = dataEscolhida ? (livres > 0 ? "livre" : "lotado") : null;
+  desenharCalendario();
 }
 
 function selecionarHorario(btn) {
@@ -324,6 +349,7 @@ async function confirmarReserva() {
   }
   if (!dataEscolhida) return alert("Escolha uma data.");
   if (!horarioEscolhido) return alert("Escolha um horário.");
+  if (new Date(dataEscolhida + "T" + horarioEscolhido.fim) < new Date()) return alert("Este horário já passou.");
   if (!turma) return alert("Selecione a turma.");
   if (!motivo) return alert("Digite o motivo da reserva.");
 
@@ -438,6 +464,32 @@ async function cancelarReserva(id) {
   }
 }
 
+async function marcarNaoUsou(id) {
+  if (!confirm("Confirmar que este horário foi reservado mas NÃO foi utilizado?")) return;
+  const f = await firebaseReady;
+  const user = f.auth.currentUser;
+  if (!user) { window.location.href = "login.html"; return; }
+  const reservaRef = f.doc(f.db, "RESERVAS", id);
+  try {
+    await f.runTransaction(f.db, async transaction => {
+      const snap = await transaction.get(reservaRef);
+      if (!snap.exists() || snap.data().uid !== user.uid) throw new Error("SEM_PERMISSAO");
+      const r = snap.data();
+      const ocRef = f.doc(f.db, "OCUPACAO", r.data + "_" + r.inicio.replace(":", "-"));
+      const ocSnap = await transaction.get(ocRef);
+      transaction.update(reservaRef, { status: "nao_usou" });
+      if (ocSnap.exists() && ocSnap.data().uid === user.uid) {
+        transaction.update(ocRef, { status: "nao_usou" });
+      }
+    });
+    await atualizarHorarios();
+    await listarReservas();
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível marcar: " + mensagemErroFirebase(error));
+  }
+}
+
 async function listarReservas() {
   const f = await firebaseReady;
   const user = f.auth.currentUser;
@@ -468,15 +520,28 @@ async function listarReservas() {
       const titulo = document.createElement("strong");
       titulo.textContent = formatarBR(r.data) + " · " + r.inicio + " - " + r.fim;
       const detalhe = document.createElement("p");
-      detalhe.textContent = r.turma + " · " + r.laboratorio + " · " + r.motivo;
+      detalhe.textContent = r.turma + " · " + r.laboratorio + " · " + r.motivo +
+        (r.status === "nao_usou" ? " · NÃO UTILIZADA" : "");
       info.append(titulo, detalhe);
+
+      const acoes = document.createElement("div");
+      acoes.className = "reserva-acoes";
+      const jaComecou = new Date(r.data + "T" + r.inicio) <= new Date();
+      if (jaComecou && r.status !== "nao_usou") {
+        const naoUsei = document.createElement("button");
+        naoUsei.className = "botao-nao-usei";
+        naoUsei.textContent = "Não utilizei";
+        naoUsei.onclick = () => marcarNaoUsou(r.id);
+        acoes.appendChild(naoUsei);
+      }
 
       const cancelar = document.createElement("button");
       cancelar.className = "botao-cancelar";
       cancelar.textContent = "Cancelar";
       cancelar.onclick = () => cancelarReserva(r.id);
 
-      item.append(info, cancelar);
+      acoes.appendChild(cancelar);
+      item.append(info, acoes);
       lista.appendChild(item);
     });
   } catch (error) {
@@ -533,6 +598,7 @@ Object.assign(window, {
   selecionarHorario,
   confirmarReserva,
   cancelarReserva,
+  marcarNaoUsou,
   listarReservas,
   desenharCalendario,
   atualizarHorarios

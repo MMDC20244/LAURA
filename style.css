@@ -156,6 +156,9 @@ form .botao { margin-top: 22px; }
     border-radius: 16px;
     padding: 22px;
 }
+/* Calendário compacto e centralizado */
+.calendario { max-width: 340px; width: 100%; margin: 0 auto; padding: 16px; }
+.mes-botao { width: 36px !important; height: 36px !important; font-size: 1rem !important; }
 
 .titulo-agenda {
     display: flex;
@@ -176,12 +179,13 @@ form .botao { margin-top: 22px; }
 .dias-semana, .dias {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
+    gap: 6px;
 }
 .dias-semana { margin-bottom: 8px; text-align: center; font-weight: 700; color: var(--suave); font-size: .85rem; }
 
 .dia {
-    aspect-ratio: 1;
+    height: 40px;
+    font-size: .9rem;
     border: 2px solid var(--linha);
     border-radius: var(--raio);
     background: #fff;
@@ -192,7 +196,9 @@ form .botao { margin-top: 22px; }
 .dia:hover:not(:disabled) { border-color: var(--verde); }
 .dia-hoje { border-color: var(--ambar); }
 .dia-selecionado { background: var(--verde); border-color: var(--verde); color: #fff; }
-.dia-passado { opacity: .35; cursor: not-allowed; }
+.dia-passado { opacity: .5; }
+.dia-selecionado.dia-livre   { background: #2e9e5b; border-color: #2e9e5b; color: #fff; }
+.dia-selecionado.dia-lotado  { background: #d32f2f; border-color: #d32f2f; color: #fff; }
 
 .reserva h2, .minhas-reservas h2 { margin-bottom: 8px; }
 #dataSelecionada { color: var(--suave); margin-bottom: 14px; }
@@ -213,7 +219,19 @@ form .botao { margin-top: 22px; }
 }
 .horarios button:hover:not(:disabled) { border-color: var(--verde); }
 .horarios button.selecionado { background: var(--verde); border-color: var(--verde); color: #fff; }
-.horarios button.ocupado { background: #f1f1f1; color: #999; text-decoration: line-through; cursor: not-allowed; }
+.horarios button.livre    { background: #e3f5ea; border-color: #2e9e5b; color: #17663a; }
+.horarios button.livre:hover { background: #cfeedb; }
+.horarios button.ocupado  { background: #fde4e4; border-color: #d32f2f; color: #9b1c1c; cursor: not-allowed; }
+.horarios button.nao-usado { background: #fff3cd; border-color: #f2b441; color: #7a5600; cursor: not-allowed; }
+.horarios button.encerrado { background: #f1f1f1; border-color: var(--linha); color: #999; cursor: not-allowed; }
+.horarios button.livre.selecionado { background: #2e9e5b; border-color: #1b6b3d; color: #fff; }
+
+/* Legenda das cores (use <div class="legenda"> no agenda.html, se quiser) */
+.legenda { display: flex; flex-wrap: wrap; gap: 14px; margin: 10px 0 14px; font-size: .85rem; color: var(--suave); }
+.legenda span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.legenda .l-livre::before { background: #2e9e5b; }
+.legenda .l-ocupado::before { background: #d32f2f; }
+.legenda .l-nao-usado::before { background: #f2b441; }
 
 .reserva .botao { margin-top: 20px; }
 
@@ -242,4 +260,45 @@ form .botao { margin-top: 22px; }
 @media (max-width: 480px) {
     .calendario, .reserva, .minhas-reservas { padding: 16px; }
     .reserva-item { flex-direction: column; align-items: flex-start; }
+}
+
+.reserva-acoes { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.botao-nao-usei {
+    padding: 8px 14px;
+    border: 2px solid #c98a00;
+    border-radius: var(--raio);
+    background: transparent;
+    color: #7a5600;
+    font-weight: 600;
+    cursor: pointer;
+}
+.botao-nao-usei:hover { background: #f2b441; }
+
+/* ---------- Fotos de fundo (uma por página) ---------- */
+
+.pagina-capa, .pagina-formulario, body:has(.agenda-container) {
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+.pagina-capa {
+    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("imagens/fundo-capa.jpg");
+}
+body:has(#loginUsuario) .pagina-formulario {
+    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("imagens/fundo-login.jpg");
+}
+body:has(#nome) .pagina-formulario {
+    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("imagens/fundo-cadastro.jpg");
+}
+body:has(.agenda-container) {
+    background-image: linear-gradient(rgba(10, 25, 60, .55), rgba(10, 25, 60, .65)), url("imagens/fundo-agenda.jpg");
+}
+.boas-vindas h2, .boas-vindas p { color: #fff; }
+
+/* Celular: foto vertical */
+@media (max-width: 600px) and (orientation: portrait) {
+    .pagina-capa {
+        background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("imagens/fundo-celular.jpg");
+    }
 }
