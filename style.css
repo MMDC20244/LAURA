@@ -283,22 +283,22 @@ form .botao { margin-top: 22px; }
     background-repeat: no-repeat;
 }
 .pagina-capa {
-    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("imagens/fundo-capa.jpg");
+    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("fundo-capa.jpg");
 }
 body:has(#loginUsuario) .pagina-formulario {
-    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("imagens/fundo-login.jpg");
+    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("fundo-login.jpg");
 }
 body:has(#nome) .pagina-formulario {
-    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("imagens/fundo-cadastro.jpg");
+    background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("fundo-cadastro.jpg");
 }
 body:has(.agenda-container) {
-    background-image: linear-gradient(rgba(10, 25, 60, .55), rgba(10, 25, 60, .65)), url("imagens/fundo-agenda.jpg");
+    background-image: linear-gradient(rgba(10, 25, 60, .55), rgba(10, 25, 60, .65)), url("fundo-agenda.jpg");
 }
 .boas-vindas h2, .boas-vindas p { color: #fff; }
 
 /* Celular: foto vertical */
 @media (max-width: 600px) and (orientation: portrait) {
     .pagina-capa {
-        background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("imagens/fundo-celular.jpg");
+        background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("fundo-celular.jpg");
     }
 }
