@@ -321,18 +321,61 @@ async function atualizarHorarios() {
   desenharCalendario();
 }
 
+function lerSelecionados() {
+  return Array.from(document.querySelectorAll("#horarios button"))
+    .filter(b => b.classList.contains("selecionado"))
+    .map(b => ({ inicio: b.dataset.inicio, fim: b.dataset.fim }));
+}
+
+/* Os horários escolhidos precisam ser seguidos (sem "buracos" no meio). */
+function selecaoSeguida() {
+  const todos = Array.from(document.querySelectorAll("#horarios button"));
+  const idx = todos.map((b, n) => b.classList.contains("selecionado") ? n : -1).filter(n => n >= 0);
+  return idx.length <= 1 || (idx[idx.length - 1] - idx[0] + 1 === idx.length);
+}
+
 function selecionarHorario(btn) {
   if (!dataEscolhida) {
     alert("Escolha uma data no calendário primeiro.");
     return;
   }
   if (btn.disabled || btn.classList.contains("ocupado")) {
-    alert("Este horário já está ocupado. Escolha outro.");
+    alert("Este horário não está disponível. Escolha outro.");
     return;
   }
-  document.querySelectorAll(".horarios button").forEach(b => b.classList.remove("selecionado"));
-  btn.classList.add("selecionado");
-  horarioEscolhido = { inicio: btn.dataset.inicio, fim: btn.dataset.fim };
+  btn.classList.toggle("selecionado");
+  if (!selecaoSeguida()) {
+    btn.classList.toggle("selecionado");
+    alert("Escolha horários seguidos (um ao lado do outro).");
+  }
+}
+
+function selecionarManha() {
+  const botoes = Array.from(document.querySelectorAll("#horarios button"))
+    .filter(b => b.dataset.inicio < "13:00");
+  if (!dataEscolhida) return alert("Escolha uma data no calendário primeiro.");
+  if (botoes.some(b => b.disabled)) {
+    return alert("Nem todos os horários da manhã estão livres neste dia. Escolha os horários manualmente.");
+  }
+  document.querySelectorAll("#horarios button").forEach(b => b.classList.remove("selecionado"));
+  botoes.forEach(b => b.classList.add("selecionado"));
+}
+
+function limparSelecao() {
+  document.querySelectorAll("#horarios button").forEach(b => b.classList.remove("selecionado"));
+}
+
+function criarAtalhos() {
+  const horarios = document.getElementById("horarios");
+  if (!horarios || document.getElementById("atalhosHorarios")) return;
+  const div = document.createElement("div");
+  div.id = "atalhosHorarios";
+  div.className = "atalhos-horarios";
+  div.innerHTML =
+    '<span>Clique em um ou mais horários seguidos, ou use:</span>' +
+    '<button type="button" onclick="selecionarManha()">Manhã toda</button>' +
+    '<button type="button" onclick="limparSelecao()">Limpar seleção</button>';
+  horarios.parentNode.insertBefore(div, horarios);
 }
 
 async function confirmarReserva() {
@@ -341,6 +384,7 @@ async function confirmarReserva() {
   const turma = document.getElementById("turma").value;
   const laboratorio = document.getElementById("laboratorio").value;
   const motivo = document.getElementById("motivo").value.trim();
+  const escolhidos = lerSelecionados();
 
   if (!user || !perfilAtual) {
     alert("Sua sessão expirou. Entre novamente.");
@@ -348,37 +392,44 @@ async function confirmarReserva() {
     return;
   }
   if (!dataEscolhida) return alert("Escolha uma data.");
-  if (!horarioEscolhido) return alert("Escolha um horário.");
-  if (new Date(dataEscolhida + "T" + horarioEscolhido.fim) < new Date()) return alert("Este horário já passou.");
+  if (escolhidos.length === 0) return alert("Escolha pelo menos um horário.");
+  if (!selecaoSeguida()) return alert("Escolha horários seguidos.");
+  const inicioGeral = escolhidos[0].inicio;
+  const fimGeral = escolhidos[escolhidos.length - 1].fim;
+  if (new Date(dataEscolhida + "T" + fimGeral) < new Date()) return alert("Este horário já passou.");
   if (!turma) return alert("Selecione a turma.");
   if (!motivo) return alert("Digite o motivo da reserva.");
 
   const botao = document.querySelector('#areaReserva button.botao');
   if (botao) { botao.disabled = true; botao.textContent = "Salvando reserva..."; }
 
-  const slotId = dataEscolhida + "_" + horarioEscolhido.inicio.replace(":", "-");
-  const ocupacaoRef = f.doc(f.db, "OCUPACAO", slotId);
+  const ocupRefs = escolhidos.map(h =>
+    f.doc(f.db, "OCUPACAO", dataEscolhida + "_" + h.inicio.replace(":", "-")));
   const reservaRef = f.doc(f.collection(f.db, "RESERVAS"));
 
   try {
     await f.runTransaction(f.db, async transaction => {
-      const ocupacaoSnap = await transaction.get(ocupacaoRef);
-      if (ocupacaoSnap.exists()) throw new Error("SLOT_OCUPADO");
+      const snaps = [];
+      for (const ref of ocupRefs) snaps.push(await transaction.get(ref));
+      if (snaps.some(sn => sn.exists())) throw new Error("SLOT_OCUPADO");
 
-      transaction.set(ocupacaoRef, {
-        uid: user.uid,
-        data: dataEscolhida,
-        inicio: horarioEscolhido.inicio,
-        fim: horarioEscolhido.fim,
-        laboratorio,
-        criadoEm: f.serverTimestamp()
+      escolhidos.forEach((h, n) => {
+        transaction.set(ocupRefs[n], {
+          uid: user.uid,
+          data: dataEscolhida,
+          inicio: h.inicio,
+          fim: h.fim,
+          laboratorio,
+          criadoEm: f.serverTimestamp()
+        });
       });
 
       transaction.set(reservaRef, {
         uid: user.uid,
         data: dataEscolhida,
-        inicio: horarioEscolhido.inicio,
-        fim: horarioEscolhido.fim,
+        inicio: inicioGeral,
+        fim: fimGeral,
+        slots: escolhidos.map(h => h.inicio),
         turma,
         laboratorio,
         motivo,
@@ -390,23 +441,21 @@ async function confirmarReserva() {
       Professor: perfilAtual.nome,
       Email: perfilAtual.email,
       Data: formatarBR(dataEscolhida),
-      Horario: horarioEscolhido.inicio + " - " + horarioEscolhido.fim,
+      Horario: inicioGeral + " - " + fimGeral,
       Turma: turma,
       Laboratorio: laboratorio,
       Motivo: motivo
     });
 
-    const dataReserva = dataEscolhida;
     document.getElementById("motivo").value = "";
     document.getElementById("turma").value = "";
-    horarioEscolhido = null;
     await atualizarHorarios();
     await listarReservas();
     alert("Reserva confirmada!");
   } catch (error) {
     console.error(error);
     if (error.message === "SLOT_OCUPADO" || error.code === "already-exists") {
-      alert("Este horário acabou de ser reservado. Escolha outro.");
+      alert("Um dos horários acabou de ser reservado. Escolha novamente.");
       await atualizarHorarios();
     } else {
       alert("Não foi possível salvar a reserva: " + mensagemErroFirebase(error));
@@ -433,14 +482,15 @@ async function cancelarReserva(id) {
       const reserva = reservaSnap.data();
       if (reserva.uid !== user.uid) throw new Error("SEM_PERMISSAO");
 
-      const slotId = reserva.data + "_" + reserva.inicio.replace(":", "-");
-      const ocupacaoRef = f.doc(f.db, "OCUPACAO", slotId);
-      const ocupacaoSnap = await transaction.get(ocupacaoRef);
+      const inicios = reserva.slots || [reserva.inicio];
+      const refs = inicios.map(h => f.doc(f.db, "OCUPACAO", reserva.data + "_" + h.replace(":", "-")));
+      const snaps = [];
+      for (const ref of refs) snaps.push(await transaction.get(ref));
 
       transaction.delete(reservaRef);
-      if (ocupacaoSnap.exists() && ocupacaoSnap.data().uid === user.uid) {
-        transaction.delete(ocupacaoRef);
-      }
+      snaps.forEach((sn, n) => {
+        if (sn.exists() && sn.data().uid === user.uid) transaction.delete(refs[n]);
+      });
     });
 
     // A reserva já foi apagada; o aviso usa os dados guardados na lista carregada.
@@ -475,12 +525,14 @@ async function marcarNaoUsou(id) {
       const snap = await transaction.get(reservaRef);
       if (!snap.exists() || snap.data().uid !== user.uid) throw new Error("SEM_PERMISSAO");
       const r = snap.data();
-      const ocRef = f.doc(f.db, "OCUPACAO", r.data + "_" + r.inicio.replace(":", "-"));
-      const ocSnap = await transaction.get(ocRef);
+      const inicios = r.slots || [r.inicio];
+      const refs = inicios.map(h => f.doc(f.db, "OCUPACAO", r.data + "_" + h.replace(":", "-")));
+      const snaps = [];
+      for (const ref of refs) snaps.push(await transaction.get(ref));
       transaction.update(reservaRef, { status: "nao_usou" });
-      if (ocSnap.exists() && ocSnap.data().uid === user.uid) {
-        transaction.update(ocRef, { status: "nao_usou" });
-      }
+      snaps.forEach((sn, n) => {
+        if (sn.exists() && sn.data().uid === user.uid) transaction.update(refs[n], { status: "nao_usou" });
+      });
     });
     await atualizarHorarios();
     await listarReservas();
@@ -572,6 +624,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           perfilAtual = perfilSnap.data();
           document.getElementById("nomeUsuario").textContent = (perfilAtual.nome || user.displayName || "Professor").split(" ")[0];
+          criarAtalhos();
           desenharCalendario();
           await atualizarHorarios();
           await listarReservas();
@@ -596,6 +649,8 @@ Object.assign(window, {
   proximoMes,
   escolherData,
   selecionarHorario,
+  selecionarManha,
+  limparSelecao,
   confirmarReserva,
   cancelarReserva,
   marcarNaoUsou,

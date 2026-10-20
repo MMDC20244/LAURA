@@ -302,3 +302,23 @@ body:has(.agenda-container) {
         background-image: linear-gradient(rgba(10, 25, 60, .45), rgba(10, 25, 60, .55)), url("fundo-celular.jpg");
     }
 }
+
+.atalhos-horarios { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; font-size: .85rem; color: var(--suave); }
+.atalhos-horarios span { flex-basis: 100%; }
+.atalhos-horarios button {
+    padding: 8px 14px;
+    border: 2px solid var(--verde);
+    border-radius: var(--raio);
+    background: transparent;
+    color: var(--verde);
+    font-weight: 600;
+    cursor: pointer;
+}
+.atalhos-horarios button:hover { background: var(--verde); color: #fff; }
+
+.atalhos-horarios label { margin: 0; font-weight: 600; }
+.atalhos-horarios select { width: auto; padding: 8px 10px; }
+.resumo-selecao { flex-basis: 100%; color: var(--verde-escuro); }
+.horarios button.parcial { background: #fff; border: 2px dashed #d32f2f; color: #9b1c1c; }
+.horarios button.parcial.selecionado { background: #2e9e5b; border: 2px solid #1b6b3d; color: #fff; }
+.resumo-ocupacao { margin-top: 10px; font-size: .85rem; color: var(--suave); }
