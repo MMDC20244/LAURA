@@ -23,7 +23,7 @@ body {
 
 h1, h2 { line-height: 1.2; }
 
-a { color: var(--verde); font-weight: 600; }
+a { color: var(--azul); font-weight: 600; }
 
 :focus-visible { outline: 3px solid var(--ambar); outline-offset: 2px; }
 
@@ -44,10 +44,10 @@ a { color: var(--verde); font-weight: 600; }
     cursor: pointer;
     transition: background .15s;
 }
-.botao:hover { background: var(--verde-escuro); }
+.botao:hover { background: var(--azul-claro); }
 .botao:disabled { opacity: .6; cursor: wait; }
 
-.botao-secundario { background: transparent; color: var(--verde); }
+.botao-secundario { background: transparent; color: var(--azul); }
 .botao-secundario:hover { background: var(--verde); color: #fff; }
 
 /* ---------- Capa ---------- */
